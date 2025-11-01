@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Rifa Violeta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAyH2AaRqpmJkVJDOao-svlqOEcCWhfOAw",
+            authDomain: "rifa-violeta.firebaseapp.com",
+            projectId: "rifa-violeta",
+            storageBucket: "rifa-violeta.firebasestorage.app",
+            messagingSenderId: "791676617355",
+            appId: "1:791676617355:web:8beeb1f41d6b71e08bca8e"
+        };
+
+        let state = {
+            numeros: {},
+            isLoggedIn: false,
+            adminView: 'numeros',
+            stats: { disponiveis: 300, reservados: 0, pagos: 0 },
+            db: null,
+            numeroSelecionado: null
+        };
+
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                state.db = getFirestore(app);
+                
+                const numerosRef = collection(state.db, 'numeros');
+                onSnapshot(numerosRef, async (snapshot) => {
+                    if (snapshot.empty) {
+                        console.log('Inicializando banco...');
+                        const batch = [];
+                        for (let i = 1; i <= 300; i++) {
+                            batch.push(setDoc(doc(state.db, 'numeros', String(i)), {
+                                status: 'disponivel',
+                                nome: '',
+                                contato: ''
+                            }));
+                        }
+                        await Promise.all(batch);
+                    } else {
+                        const dados = {};
+                        snapshot.forEach((doc) => {
+                            dados[doc.id] = doc.data();
+                        });
+                        state.numeros = dados;
+                        calculateStats();
+                        render();
+                    }
+                });
+            } catch (error) {
+                alert('Erro ao conectar com Firebase');
+            }
+        }
+
+        function calculateStats() {
+            state.stats = { disponiveis: 0, reservados: 0, pagos: 0 };
+            Object.values(state.numeros).forEach(num => {
+                if (num.status === 'disponivel') state.stats.disponiveis++;
+                else if (num.status === 'reservado') state.stats.reservados++;
+                else if (num.status === 'pago') state.stats.pagos++;
+            });
+        }
+
+        async function atualizarNumero(numero, novoStatus, nome, contato) {
+            if (state.db) {
+                await setDoc(doc(state.db, 'numeros', String(numero)), {
+                    status: novoStatus,
+                    nome: nome || '',
+                    contato: contato || '',
+                    atualizadoEm: new Date().toISOString()
+                });
+            }
+        }
+
+        function login() {
+            const senha = document.getElementById('senha')?.value;
+            if (senha === 'violeta2024') {
+                state.isLoggedIn = true;
+                render();
+            } else {
+                alert('Senha incorreta!');
+            }
+        }
+
+        function logout() {
+            state.isLoggedIn = false;
+            render();
+        }
+
+        function getCorStatus(status) {
+            if (status === 'disponivel') return 'bg-green-500 hover:bg-green-600';
+            if (status === 'reservado') return 'bg-yellow-500 hover:bg-yellow-600';
+            if (status === 'pago') return 'bg-blue-500 hover:bg-blue-600';
+        }
+
+        function toggleStatus(numero) {
+            const atual = state.numeros[numero]?.status || 'disponivel';
+            const novoStatus = atual === 'disponivel' ? 'reservado' : atual === 'reservado' ? 'pago' : 'disponivel';
+            atualizarNumero(numero, novoStatus, state.numeros[numero]?.nome, state.numeros[numero]?.contato);
+        }
+
+        function abrirModal(numero) {
+            state.numeroSelecionado = numero;
+            render();
+        }
+
+        function fecharModal() {
+            state.numeroSelecionado = null;
+            render();
+        }
+
+        function salvarDados() {
+            const numero = state.numeroSelecionado;
+            const nome = document.getElementById('nome')?.value || '';
+            const contato = document.getElementById('contato')?.value || '';
+            const status = state.numeros[numero]?.status || 'disponivel';
+            atualizarNumero(numero, status, nome, contato);
+            fecharModal();
+        }
+
+        function renderLogin() {
+            return `
+                <div class="min-h-screen bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+                        <div class="text-center mb-8">
+                            <h1 class="text-3xl font-bold text-gray-800 mb-2">🔐 Painel Admin</h1>
+                            <p class="text-gray-600">Rifa Solidária da Violeta</p>
+                        </div>
+                        <input 
+                            id="senha" 
+                            type="password" 
+                            placeholder="Digite a senha" 
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 focus:border-pink-600 outline-none"
+                            onkeypress="if(event.key === 'Enter') login()"
+                        />
+                        <button onclick="login()" class="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700 transition-all">
+                            Entrar
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGrade() {
+            let numerosHTML = '';
+            for (let i = 1; i <= 300; i++) {
+                const numero = state.numeros[i];
+                const corClass = getCorStatus(numero?.status || 'disponivel');
+                const temDados = numero?.nome || numero?.contato;
+                
+                numerosHTML += `
+                    <button 
+                        onclick="toggleStatus(${i})"
+                        oncontextmenu="event.preventDefault(); abrirModal(${i})"
+                        class="${corClass} text-white font-bold py-2 text-sm transition-all transform hover:scale-110 relative"
+                    >
+                        ${i}
+                        ${temDados ? '<span class="absolute top-0 right-0 text-xs">📋</span>' : ''}
+                    </button>
+                `;
+            }
+
+            let modalHTML = '';
+            if (state.numeroSelecionado) {
+                const numero = state.numeros[state.numeroSelecionado];
+                modalHTML = `
+                    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl w-full max-w-md p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-bold text-gray-800">Número ${state.numeroSelecionado}</h2>
+                                <button onclick="fecharModal()" class="text-gray-600 hover:text-gray-800 text-2xl">✕</button>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Status:</label>
+                                <div class="flex gap-2">
+                                    <button 
+                                        onclick="atualizarNumero(${state.numeroSelecionado}, 'disponivel', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'disponivel' ? 'bg-green-500 text-white' : 'bg-gray-200'}"
+                                    >
+                                        Disponível
+                                    </button>
+                                    <button 
+                                        onclick="atualizarNumero(${state.numeroSelecionado}, 'reservado', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'reservado' ? 'bg-yellow-500 text-white' : 'bg-gray-200'}"
+                                    >
+                                        Reservado
+                                    </button>
+                                    <button 
+                                        onclick="atualizarNumero(${state.numeroSelecionado}, 'pago', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'pago' ? 'bg-blue-500 text-white' : 'bg-gray-200'}"
+                                    >
+                                        Pago
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Nome:</label>
+                                <input 
+                                    id="nome"
+                                    type="text" 
+                                    value="${numero?.nome || ''}"
+                                    placeholder="Nome do comprador"
+                                    class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-pink-600 outline-none"
+                                />
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Contato:</label>
+                                <input 
+                                    id="contato"
+                                    type="text" 
+                                    value="${numero?.contato || ''}"
+                                    placeholder="Telefone ou email"
+                                    class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-pink-600 outline-none"
+                                />
+                            </div>
+
+                            <button 
+                                onclick="salvarDados()"
+                                class="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700"
+                            >
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="p-4">
+                    <div class="bg-white rounded-lg shadow-md p-3 mb-4 text-sm text-gray-600">
+                        <strong>Clique</strong> para mudar status • <strong>Clique direito</strong> para editar dados
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-4">
+                        <div class="grid grid-cols-10 gap-1">
+                            ${numerosHTML}
+                        </div>
+                    </div>
+                </div>
+                ${modalHTML}
+            `;
+        }
+
+        function renderLista() {
+            const numerosVendidos = [];
+            for (let i = 1; i <= 300; i++) {
+                const numero = state.numeros[i];
+                if (numero && (numero.status === 'reservado' || numero.status === 'pago')) {
+                    numerosVendidos.push({ numero: i, ...numero });
+                }
+            }
+            numerosVendidos.sort((a, b) => a.numero - b.numero);
+
+            const totalReservados = numerosVendidos.filter(n => n.status === 'reservado').length;
+            const totalPagos = numerosVendidos.filter(n => n.status === 'pago').length;
+            const totalArrecadado = totalPagos * 20;
+
+            let listaHTML = numerosVendidos.length === 0 
+                ? '<div class="text-center py-12 text-gray-500"><p class="text-xl mb-2">📋</p><p>Nenhum número vendido</p></div>'
+                : numerosVendidos.map(item => {
+                    const statusBadge = item.status === 'pago' 
+                        ? '<span class="bg-blue-500 text-white text-xs px-2 py-1 rounded font-semibold">Pago</span>'
+                        : '<span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-semibold">Reservado</span>';
+                    
+                    return `
+                        <div class="bg-white rounded-lg shadow-md p-4 flex items-center justify-between hover:shadow-lg transition-all">
+                            <div class="flex items-center gap-4">
+                                <div class="bg-pink-100 text-pink-600 font-bold text-lg w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                                    ${item.numero}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800">${item.nome || '(sem nome)'}</p>
+                                    <p class="text-sm text-gray-600">${item.contato || '(sem contato)'}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                ${statusBadge}
+                                <button 
+                                    onclick="abrirModal(${item.numero})"
+                                    class="text-pink-600 hover:text-pink-800 font-semibold"
+                                >
+                                    Editar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            let modalHTML = '';
+            if (state.numeroSelecionado) {
+                const numero = state.numeros[state.numeroSelecionado];
+                modalHTML = `
+                    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white rounded-2xl w-full max-w-md p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-bold text-gray-800">Número ${state.numeroSelecionado}</h2>
+                                <button onclick="fecharModal()" class="text-gray-600 hover:text-gray-800 text-2xl">✕</button>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Status:</label>
+                                <div class="flex gap-2">
+                                    <button 
+                                        onclick="atualizarNumero(${state.numeroSelecionado}, 'disponivel', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'disponivel' ? 'bg-green-500 text-white' : 'bg-gray-200'}"
+                                    >
+                                        Disponível
+                                    </button>
+                                    <button 
+                                        onclick="atualizarNumero(${state.numeroSelecionado}, 'reservado', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'reservado' ? 'bg-yellow-500 text-white' : 'bg-gray-200'}"
+                                    >
+                                        Reservado
+                                    </button>
+                                    <button 
+                                        onclick="atualizarNumero(${state.numeroSelecionado}, 'pago', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'pago' ? 'bg-blue-500 text-white' : 'bg-gray-200'}"
+                                    >
+                                        Pago
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Nome:</label>
+                                <input 
+                                    id="nome"
+                                    type="text" 
+                                    value="${numero?.nome || ''}"
+                                    placeholder="Nome do comprador"
+                                    class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-pink-600 outline-none"
+                                />
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Contato:</label>
+                                <input 
+                                    id="contato"
+                                    type="text" 
+                                    value="${numero?.contato || ''}"
+                                    placeholder="Telefone ou email"
+                                    class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-pink-600 outline-none"
+                                />
+                            </div>
+
+                            <button 
+                                onclick="salvarDados()"
+                                class="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700"
+                            >
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="p-4">
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white rounded-xl shadow-md p-4 text-center">
+                            <div class="text-2xl font-bold text-gray-800">${numerosVendidos.length}</div>
+                            <div class="text-xs text-gray-600">Total</div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-4 text-center">
+                            <div class="text-2xl font-bold text-yellow-600">${totalReservados}</div>
+                            <div class="text-xs text-gray-600">Reservados</div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-md p-4 text-center">
+                            <div class="text-2xl font-bold text-blue-600">${totalPagos}</div>
+                            <div class="text-xs text-gray-600">Pagos</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-pink-600 text-white rounded-xl shadow-md p-4 mb-6 text-center">
+                        <p class="text-sm mb-1">Total Arrecadado</p>
+                        <p class="text-3xl font-bold">R$ ${totalArrecadado.toLocaleString('pt-BR')}</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">Compradores</h2>
+                        <div class="space-y-3">
+                            ${listaHTML}
+                        </div>
+                    </div>
+                </div>
+                ${modalHTML}
+            `;
+        }
+
+        function renderAdmin() {
+            return `
+                <div class="min-h-screen bg-pink-50">
+                    <div class="bg-white shadow-md sticky top-0 z-20">
+                        <div class="container mx-auto px-4 py-4">
+                            <div class="flex items-center justify-between mb-4">
+                                <h1 class="text-2xl font-bold text-gray-800">Painel Admin</h1>
+                                <button onclick="logout()" class="text-red-600 hover:text-red-800 font-semibold">
+                                    Sair 🚪
+                                </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-4 mb-4">
+                                <div class="bg-green-100 rounded-lg p-3 text-center">
+                                    <div class="text-2xl font-bold text-green-600">${state.stats.disponiveis}</div>
+                                    <div class="text-xs text-gray-600">Disponíveis</div>
+                                </div>
+                                <div class="bg-yellow-100 rounded-lg p-3 text-center">
+                                    <div class="text-2xl font-bold text-yellow-600">${state.stats.reservados}</div>
+                                    <div class="text-xs text-gray-600">Reservados</div>
+                                </div>
+                                <div class="bg-blue-100 rounded-lg p-3 text-center">
+                                    <div class="text-2xl font-bold text-blue-600">${state.stats.pagos}</div>
+                                    <div class="text-xs text-gray-600">Pagos</div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-2">
+                                <button 
+                                    onclick="state.adminView = 'numeros'; render()"
+                                    class="flex-1 px-4 py-2 rounded-lg font-semibold ${state.adminView === 'numeros' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}"
+                                >
+                                    Grade
+                                </button>
+                                <button 
+                                    onclick="state.adminView = 'lista'; render()"
+                                    class="flex-1 px-4 py-2 rounded-lg font-semibold ${state.adminView === 'lista' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}"
+                                >
+                                    Lista
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${state.adminView === 'lista' ? renderLista() : renderGrade()}
+                </div>
+            `;
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = state.isLoggedIn ? renderAdmin() : renderLogin();
+        }
+
+        window.login = login;
+        window.logout = logout;
+        window.toggleStatus = toggleStatus;
+        window.abrirModal = abrirModal;
+        window.fecharModal = fecharModal;
+        window.salvarDados = salvarDados;
+        window.atualizarNumero = atualizarNumero;
+        window.state = state;
+        window.render = render;
+
+        window.onload = () => initFirebase();
+    </script>
+</body>
+</html>
