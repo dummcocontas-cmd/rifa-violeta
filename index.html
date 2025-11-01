@@ -127,7 +127,7 @@
             const progressoPercent = Math.min((state.stats.pagos * 20 / META) * 100, 100);
             
             return `
-                <div class="min-h-screen bg-pink-50">
+                <div class="min-h-screen bg-purple-50">
                     <div class="bg-white shadow-md">
                         <div class="container mx-auto px-4 py-6">
                             <h1 class="text-4xl font-bold text-center text-gray-800" style="font-family: cursive">
@@ -140,7 +140,7 @@
                     <div class="container mx-auto px-4 py-8 max-w-4xl">
                         <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
                             <div class="flex flex-col md:flex-row gap-6 items-center">
-                                <div class="w-32 h-32 rounded-full flex-shrink-0 overflow-hidden border-4 border-pink-300 shadow-lg">
+                                <div class="w-32 h-32 rounded-full flex-shrink-0 overflow-hidden border-4 border-purple-300 shadow-lg">
                                     <img 
                                         src="https://raw.githubusercontent.com/dummcocontas-cmd/meusite/refs/heads/main/assets/ll.jpeg" 
                                         alt="Foto da Violeta"
@@ -176,21 +176,24 @@
 
                         <div class="bg-white rounded-xl shadow-md p-6 mb-6">
                             <div class="flex justify-between text-sm text-gray-600 mb-2">
-                                <span class="font-bold text-pink-600">R$ ${(state.stats.pagos * 20).toLocaleString('pt-BR')}</span>
+                                <span class="font-bold" style="color: #6b227d">R$ ${(state.stats.pagos * 20).toLocaleString('pt-BR')}</span>
                                 <span>Meta: R$ ${META.toLocaleString('pt-BR')}</span>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-4">
-                                <div class="bg-pink-600 h-4 rounded-full transition-all" style="width: ${progressoPercent}%"></div>
+                                <div class="h-4 rounded-full transition-all" style="background-color: #6b227d; width: ${progressoPercent}%"></div>
                             </div>
                         </div>
 
-                        <div class="bg-pink-600 text-white rounded-xl shadow-md p-6 mb-6 text-center">
+                        <div class="text-white rounded-xl shadow-md p-6 mb-6 text-center" style="background-color: #6b227d">
                             <p class="text-sm mb-2">Valor por número</p>
                             <p class="text-3xl font-bold mb-4">R$ 20,00</p>
                             <p class="text-sm mb-3">Chave Pix:</p>
                             <button 
                                 onclick="copiarPix()"
-                                class="bg-white text-pink-600 font-bold px-6 py-3 rounded-lg hover:bg-pink-50 transition-all flex items-center gap-2 mx-auto"
+                                class="font-bold px-6 py-3 rounded-lg transition-all flex items-center gap-2 mx-auto"
+                                style="background-color: white; color: #6b227d"
+                                onmouseover="this.style.backgroundColor='#f3e8ff'"
+                                onmouseout="this.style.backgroundColor='white'"
                             >
                                 <span>📋</span>
                                 <span id="pix-texto">${PIX}</span>
@@ -198,7 +201,7 @@
                             <p id="pix-copiado" class="text-xs mt-2 opacity-0 transition-opacity">✓ Copiado!</p>
                         </div>
 
-                        <button onclick="state.view = 'numeros'; render()" class="w-full bg-pink-600 text-white font-bold py-4 rounded-xl shadow-md hover:bg-pink-700 transition-all">
+                        <button onclick="state.view = 'numeros'; render()" class="w-full text-white font-bold py-4 rounded-xl shadow-md transition-all" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
                             🎯 Escolher Números
                         </button>
                     </div>
@@ -212,13 +215,15 @@
                 const numero = state.numeros[i];
                 const disponivel = numero?.status === 'disponivel';
                 const noCarrinho = state.carrinho.includes(i);
-                const corClass = noCarrinho ? 'bg-pink-600 ring-2 ring-pink-800' : getCorStatus(numero?.status || 'disponivel');
+                const corClass = noCarrinho ? 'ring-2' : getCorStatus(numero?.status || 'disponivel');
+                const corStyle = noCarrinho ? 'background-color: #6b227d; border: 2px solid #4a1858' : '';
                 
                 numerosHTML += `
                     <button 
                         onclick="handleNumeroClick(${i})"
                         ${!disponivel ? 'disabled' : ''}
                         class="${corClass} text-white font-bold py-2 text-sm transition-all transform ${disponivel ? 'hover:scale-110' : 'opacity-60'}"
+                        style="${corStyle}"
                     >
                         ${i}
                     </button>
@@ -239,10 +244,10 @@
                                 ${state.carrinho.length === 0 ? 
                                     '<p class="text-center text-gray-500 py-8">Nenhum número selecionado</p>' :
                                     state.carrinho.sort((a, b) => a - b).map(num => `
-                                        <div class="flex items-center justify-between bg-pink-50 p-3 rounded-lg mb-2">
+                                        <div class="flex items-center justify-between p-3 rounded-lg mb-2" style="background-color: #f3e8ff">
                                             <span class="font-bold text-gray-800">Número ${num}</span>
                                             <div class="flex items-center gap-3">
-                                                <span class="text-pink-600 font-bold">R$ 20,00</span>
+                                                <span class="font-bold" style="color: #6b227d">R$ 20,00</span>
                                                 <button onclick="removerDoCarrinho(${num})" class="text-red-500 hover:text-red-700 text-xl">🗑️</button>
                                             </div>
                                         </div>
@@ -254,9 +259,9 @@
                                 <div class="p-6 border-t">
                                     <div class="flex justify-between mb-4 text-lg font-bold">
                                         <span>Total:</span>
-                                        <span class="text-pink-600">R$ ${(state.carrinho.length * 20).toLocaleString('pt-BR')}</span>
+                                        <span style="color: #6b227d">R$ ${(state.carrinho.length * 20).toLocaleString('pt-BR')}</span>
                                     </div>
-                                    <button onclick="finalizarCompra()" class="w-full bg-pink-600 text-white font-bold py-4 rounded-xl hover:bg-pink-700 transition-all">
+                                    <button onclick="finalizarCompra()" class="w-full text-white font-bold py-4 rounded-xl transition-all" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
                                         Enviar para WhatsApp
                                     </button>
                                 </div>
@@ -267,15 +272,15 @@
             }
 
             return `
-                <div class="min-h-screen bg-pink-50">
+                <div class="min-h-screen bg-purple-50">
                     <div class="bg-white shadow-md sticky top-0 z-10">
                         <div class="container mx-auto px-4 py-4">
                             <div class="flex items-center justify-between">
-                                <button onclick="state.view = 'home'; render()" class="text-pink-600 hover:text-pink-800 font-semibold">
+                                <button onclick="state.view = 'home'; render()" class="font-semibold" style="color: #6b227d" onmouseover="this.style.color='#4a1858'" onmouseout="this.style.color='#6b227d'">
                                     ← Voltar
                                 </button>
                                 <h1 class="text-2xl font-bold text-gray-800">Escolha seus números</h1>
-                                <button onclick="state.mostrarCarrinho = true; render()" class="relative bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700">
+                                <button onclick="state.mostrarCarrinho = true; render()" class="relative text-white px-4 py-2 rounded-lg" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
                                     🛒
                                     ${state.carrinho.length > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">${state.carrinho.length}</span>` : ''}
                                 </button>
