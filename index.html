@@ -76,7 +76,7 @@
         function getCorStatus(status) {
             if (status === 'disponivel') return 'bg-green-500 hover:bg-green-600 cursor-pointer';
             if (status === 'reservado') return 'bg-yellow-500 cursor-not-allowed';
-            if (status === 'pago') return 'bg-blue-500 cursor-not-allowed';
+            if (status === 'pago') return 'bg-red-500 cursor-not-allowed';
         }
 
         function handleNumeroClick(numero) {
@@ -169,7 +169,7 @@
                                 <div class="text-xs text-gray-600">Reservados</div>
                             </div>
                             <div class="bg-white rounded-xl shadow-md p-4 text-center">
-                                <div class="text-2xl font-bold text-blue-600">${state.stats.pagos}</div>
+                                <div class="text-2xl font-bold text-red-600">${state.stats.pagos}</div>
                                 <div class="text-xs text-gray-600">Pagos</div>
                             </div>
                         </div>
@@ -299,7 +299,7 @@
                                 <span>Reservado</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 bg-blue-500 rounded"></div>
+                                <div class="w-3 h-3 bg-red-500 rounded"></div>
                                 <span>Pago</span>
                             </div>
                         </div>

@@ -102,7 +102,7 @@
         function getCorStatus(status) {
             if (status === 'disponivel') return 'bg-green-500 hover:bg-green-600';
             if (status === 'reservado') return 'bg-yellow-500 hover:bg-yellow-600';
-            if (status === 'pago') return 'bg-blue-500 hover:bg-blue-600';
+            if (status === 'pago') return 'bg-red-500 hover:bg-red-600';
         }
 
         function toggleStatus(numero) {
@@ -200,7 +200,7 @@
                                     </button>
                                     <button 
                                         onclick="atualizarNumero(${state.numeroSelecionado}, 'pago', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
-                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'pago' ? 'bg-blue-500 text-white' : 'bg-gray-200'}"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'pago' ? 'bg-red-500 text-white' : 'bg-gray-200'}"
                                     >
                                         Pago
                                     </button>
@@ -273,7 +273,7 @@
                 ? '<div class="text-center py-12 text-gray-500"><p class="text-xl mb-2">📋</p><p>Nenhum número vendido</p></div>'
                 : numerosVendidos.map(item => {
                     const statusBadge = item.status === 'pago' 
-                        ? '<span class="bg-blue-500 text-white text-xs px-2 py-1 rounded font-semibold">Pago</span>'
+                        ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded font-semibold">Pago</span>'
                         : '<span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded font-semibold">Reservado</span>';
                     
                     return `
@@ -328,7 +328,7 @@
                                     </button>
                                     <button 
                                         onclick="atualizarNumero(${state.numeroSelecionado}, 'pago', document.getElementById('nome').value, document.getElementById('contato').value); fecharModal()"
-                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'pago' ? 'bg-blue-500 text-white' : 'bg-gray-200'}"
+                                        class="flex-1 py-2 rounded-lg font-semibold ${numero?.status === 'pago' ? 'bg-red-500 text-white' : 'bg-gray-200'}"
                                     >
                                         Pago
                                     </button>
@@ -380,7 +380,7 @@
                             <div class="text-xs text-gray-600">Reservados</div>
                         </div>
                         <div class="bg-white rounded-xl shadow-md p-4 text-center">
-                            <div class="text-2xl font-bold text-blue-600">${totalPagos}</div>
+                            <div class="text-2xl font-bold text-red-600">${totalPagos}</div>
                             <div class="text-xs text-gray-600">Pagos</div>
                         </div>
                     </div>
@@ -422,8 +422,8 @@
                                     <div class="text-2xl font-bold text-yellow-600">${state.stats.reservados}</div>
                                     <div class="text-xs text-gray-600">Reservados</div>
                                 </div>
-                                <div class="bg-blue-100 rounded-lg p-3 text-center">
-                                    <div class="text-2xl font-bold text-blue-600">${state.stats.pagos}</div>
+                                <div class="bg-red-100 rounded-lg p-3 text-center">
+                                    <div class="text-2xl font-bold text-red-600">${state.stats.pagos}</div>
                                     <div class="text-xs text-gray-600">Pagos</div>
                                 </div>
                             </div>
