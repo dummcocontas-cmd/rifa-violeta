@@ -116,7 +116,7 @@
             
             const numerosOrdenados = [...state.carrinho].sort((a, b) => a - b);
             const total = state.carrinho.length * 20;
-            const mensagem = `Oi! Quero participar da Rifa Solidária da Violeta 💜💜\n\nEscolhi ${state.carrinho.length} número(s): ${numerosOrdenados.join(', ')}\n\nTotal: R$ ${total.toLocaleString('pt-BR')}\n\nEu já mando o pagamento!`;
+            const mensagem = `Oi! Quero participar da Rifa Solidária da Violeta 💜💜\n\nEscolhi ${state.carrinho.length} número(s): ${numerosOrdenados.join(', ')}\n\nTotal: R$ ${total.toLocaleString('pt-BR')}\n\nEu já mando o pagamento!\n\n------------------------\n\nChave Pix: 1499743-2961`;
             window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`, '_blank');
             state.carrinho = [];
             state.mostrarCarrinho = false;
@@ -153,7 +153,7 @@
                                         A Violeta é uma cachorrinha SRD, que após sofrer um ato de crueldade (ser atropelada e abandonada)
                                         Teve uma fratura grave na coluna e foi diagnosticada também com doença do carrapato 💔<br>
 
-                                        Para que ela possa se recuperar e voltar a andar, teve que fazer uma cirurgia delicada, está fazendo um tratamento, e está tomando alguns remédios, e tudo terá um custo de aproximadamente <strong class="text-pink-600">R$ 6.880,00</strong>.
+                                        Para que ela possa se recuperar e voltar a andar, teve que fazer uma cirurgia delicada, está fazendo um tratamento, e está tomando alguns remédios, e tudo terá um custo de aproximadamente <strong style="color: #6b227d">R$ 6.880,00</strong>.
                                     </p>
                                 </div>
                             </div>
