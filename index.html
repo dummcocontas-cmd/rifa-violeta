@@ -282,9 +282,9 @@
                                 <h1 class="text-2xl font-bold text-gray-800">Escolha seus números</h1>
                                 <button onclick="state.mostrarCarrinho = true; render()" class="relative text-white px-4 py-2 rounded-lg" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
                                     🛒
-                                    ${state.carrinho.length > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">${state.carrinho.length}</span>` : ''}
-                                </button>
-                                <a
+                                    ${state.carrinho.length > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">${state.carrinho.length}</span>` : ''
+
+                                        <a
               href="https://www.facebook.com/ajudeavioleta/"
               target="_blank"
               rel="noopener noreferrer"
@@ -295,6 +295,9 @@
               </svg>
               Siga nossa página no Facebook
             </a>
+                                    
+                                </button>
+                              
                             </div>
                         </div>
                     </div>
