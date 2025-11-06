@@ -1,290 +1,265 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rifa Solidária da Violeta 🐶💖</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body>
-    <div id="app"></div>
+import React, { useState, useEffect } from 'react';
+import { Heart, Shield, ShoppingCart, Trash2, X } from 'lucide-react';
 
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+// 🔥 COLE AQUI SUA CONFIGURAÇÃO DO FIREBASE
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY_AQUI",
+  authDomain: "seu-projeto.firebaseapp.com",
+  projectId: "seu-projeto-id",
+  storageBucket: "seu-projeto.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAyH2AaRqpmJkVJDOao-svlqOEcCWhfOAw",
-            authDomain: "rifa-violeta.firebaseapp.com",
-            projectId: "rifa-violeta",
-            storageBucket: "rifa-violeta.firebasestorage.app",
-            messagingSenderId: "791676617355",
-            appId: "1:791676617355:web:8beeb1f41d6b71e08bca8e"
-        };
+export default function RifaVioleta() {
+  const [view, setView] = useState('home');
+  const [numeros, setNumeros] = useState({});
+  const [carrinho, setCarrinho] = useState([]);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ disponiveis: 300, reservados: 0, pagos: 0 });
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const [db, setDb] = useState(null);
+  const [mostrarCarrinho, setMostrarCarrinho] = useState(false);
 
-        const WHATSAPP = '5514997432961';
-        const PIX = '14 99743-2961';
-        const META = 6000;
+  const WHATSAPP = '5514997432961';
+  const PIX = '14 99743-2961';
+  const META = 6880;
 
-        let state = {
-            numeros: {},
-            carrinho: [],
-            view: 'home',
-            stats: { disponiveis: 300, reservados: 0, pagos: 0 },
-            mostrarCarrinho: false
-        };
+  useEffect(() => {
+    const initFirebase = async () => {
+      try {
+        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, collection, doc, setDoc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-        async function initFirebase() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                const db = getFirestore(app);
-                
-                onSnapshot(collection(db, 'numeros'), (snapshot) => {
-                    if (!snapshot.empty) {
-                        const dados = {};
-                        snapshot.forEach((doc) => {
-                            dados[doc.id] = doc.data();
-                        });
-                        state.numeros = dados;
-                        calculateStats();
-                        render();
-                    }
-                });
-            } catch (error) {
-                console.log('Modo offline');
-                initLocal();
-            }
-        }
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+        setDb(firestore);
+        setFirebaseReady(true);
 
-        function initLocal() {
+        const numerosRef = collection(firestore, 'numeros');
+        
+        onSnapshot(numerosRef, async (snapshot) => {
+          if (snapshot.empty) {
+            const inicial = {};
             for (let i = 1; i <= 300; i++) {
-                state.numeros[i] = { status: 'disponivel' };
+              inicial[i] = { status: 'disponivel', nome: '', contato: '' };
+              await setDoc(doc(firestore, 'numeros', String(i)), inicial[i]);
             }
-            calculateStats();
-            render();
-        }
-
-        function calculateStats() {
-            state.stats = { disponiveis: 0, reservados: 0, pagos: 0 };
-            Object.values(state.numeros).forEach(num => {
-                if (num.status === 'disponivel') state.stats.disponiveis++;
-                else if (num.status === 'reservado') state.stats.reservados++;
-                else if (num.status === 'pago') state.stats.pagos++;
+            setNumeros(inicial);
+            calculateStats(inicial);
+          } else {
+            const dados = {};
+            snapshot.forEach((doc) => {
+              dados[doc.id] = doc.data();
             });
-        }
+            setNumeros(dados);
+            calculateStats(dados);
+          }
+          setLoading(false);
+        }, (error) => {
+          usarModoLocal();
+        });
 
-        function getCorStatus(status) {
-            if (status === 'disponivel') return 'bg-green-500 hover:bg-green-600 cursor-pointer';
-            if (status === 'reservado') return 'bg-yellow-500 cursor-not-allowed';
-            if (status === 'pago') return 'bg-red-500 cursor-not-allowed';
-        }
+      } catch (error) {
+        usarModoLocal();
+      }
+    };
 
-        function handleNumeroClick(numero) {
-            const numeroData = state.numeros[numero];
-            if (numeroData?.status !== 'disponivel') return;
+    initFirebase();
+  }, []);
+
+  const usarModoLocal = async () => {
+    try {
+      const result = await window.storage.get('rifa-violeta-numeros');
+      if (result && result.value) {
+        const data = JSON.parse(result.value);
+        setNumeros(data);
+        calculateStats(data);
+      } else {
+        const inicial = {};
+        for (let i = 1; i <= 300; i++) {
+          inicial[i] = { status: 'disponivel', nome: '', contato: '' };
+        }
+        setNumeros(inicial);
+        await window.storage.set('rifa-violeta-numeros', JSON.stringify(inicial));
+        calculateStats(inicial);
+      }
+    } catch (error) {
+      const inicial = {};
+      for (let i = 1; i <= 300; i++) {
+        inicial[i] = { status: 'disponivel', nome: '', contato: '' };
+      }
+      setNumeros(inicial);
+      calculateStats(inicial);
+    }
+    setLoading(false);
+  };
+
+  const calculateStats = (data) => {
+    const stats = { disponiveis: 0, reservados: 0, pagos: 0 };
+    Object.values(data).forEach(num => {
+      if (num.status === 'disponivel') stats.disponiveis++;
+      else if (num.status === 'reservado') stats.reservados++;
+      else if (num.status === 'pago') stats.pagos++;
+    });
+    setStats(stats);
+  };
+
+  const atualizarNumero = async (numero, novoStatus) => {
+    if (firebaseReady && db) {
+      try {
+        const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const numeroDoc = doc(db, 'numeros', String(numero));
+        await setDoc(numeroDoc, {
+          status: novoStatus,
+          nome: numeros[numero].nome || '',
+          contato: numeros[numero].contato || '',
+          atualizadoEm: new Date().toISOString()
+        });
+      } catch (error) {
+        const novosNumeros = {
+          ...numeros,
+          [numero]: { ...numeros[numero], status: novoStatus }
+        };
+        setNumeros(novosNumeros);
+        await window.storage.set('rifa-violeta-numeros', JSON.stringify(novosNumeros));
+        calculateStats(novosNumeros);
+      }
+    } else {
+      const novosNumeros = {
+        ...numeros,
+        [numero]: { ...numeros[numero], status: novoStatus }
+      };
+      setNumeros(novosNumeros);
+      await window.storage.set('rifa-violeta-numeros', JSON.stringify(novosNumeros));
+      calculateStats(novosNumeros);
+    }
+  };
+
+  const adicionarAoCarrinho = (numero) => {
+    if (!carrinho.includes(numero)) {
+      setCarrinho([...carrinho, numero]);
+    }
+  };
+
+  const removerDoCarrinho = (numero) => {
+    setCarrinho(carrinho.filter(n => n !== numero));
+  };
+
+  const finalizarCompra = () => {
+    if (carrinho.length === 0) {
+      alert('Adicione pelo menos um número ao carrinho!');
+      return;
+    }
+    
+    const numerosOrdenados = [...carrinho].sort((a, b) => a - b);
+    const total = carrinho.length * 20;
+    const mensagem = `Oi! Quero participar da Rifa Solidária da Violeta 🐶💖\n\nEscolhi ${carrinho.length} número(s): ${numerosOrdenados.join(', ')}\n\nTotal: R$ ${total.toLocaleString('pt-BR')}\n\nAguardo instruções para o pagamento!`;
+    window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`, '_blank');
+  };
+
+  const getCorStatus = (status) => {
+    if (status === 'disponivel') return 'bg-green-500 hover:bg-green-600';
+    if (status === 'reservado') return 'bg-yellow-500 cursor-not-allowed';
+    if (status === 'pago') return 'bg-blue-500 cursor-not-allowed';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-pink-50 flex items-center justify-center">
+        <div className="text-2xl text-pink-600">Carregando...</div>
+      </div>
+    );
+  }
+
+  // HOME VIEW
+  if (view === 'home') {
+    return (
+      <div className="min-h-screen bg-pink-50">
+        <div className="bg-white shadow-md">
+          <div className="container mx-auto px-4 py-6">
+            <h1 className="text-4xl font-bold text-center text-gray-800" style={{ fontFamily: 'cursive' }}>
+              Rifa Solidária
+            </h1>
+            <div className="w-32 mx-auto border-t-2 border-gray-800 mt-2"></div>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          {/* Card da Violeta */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              <div className="w-32 h-32 rounded-full flex-shrink-0 overflow-hidden border-4 border-pink-300 shadow-lg bg-gray-100">
+                <img 
+                  src="https://i.imgur.com/BggULPB.jpeg" 
+                  alt="Violeta"
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23ec4899'/%3E%3C/svg%3E";
+                  }}
+                />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-2xl font-bold text-gray-800 mb-3">Ajude a Violeta</h2>
+                <p className="text-gray-700 leading-relaxed">
+                  Cachorrinha SRD abandonada em Bauru-SP com fratura na coluna e doença do carrapato. 
+                  Precisa de cirurgia urgente no valor de <strong className="text-pink-600">R$ 6.880,00</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Estatísticas */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-md p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">{stats.disponiveis}</div>
+              <div className="text-xs text-gray-600">Disponíveis</div>
+            </div>
+            <div className="bg-white rounded-xl shadow-md p-4 text-center">
+              <div className="text-2xl font-bold text-yellow-600">{stats.reservados}</div>
+              <div className="text-xs text-gray-600">Reservados</div>
+            </div>
+            <div className="bg-white rounded-xl shadow-md p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">{stats.pagos}</div>
+              <div className="text-xs text-gray-600">Pagos</div>
+            </div>
+          </div>
+
+          {/* Progresso */}
+          <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span className="font-bold text-pink-600">R$ {(stats.pagos * 20).toLocaleString('pt-BR')}</span>
+              <span>Meta: R$ {META.toLocaleString('pt-BR')}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-4">
+              <div
+                className="bg-pink-600 h-4 rounded-full transition-all"
+                style={{ width: `${Math.min((stats.pagos * 20 / META) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Info Rápida */}
+          <div className="bg-pink-600 text-white rounded-xl shadow-md p-6 mb-6 text-center">
+            <p className="text-sm mb-2">Valor por número</p>
+            <p className="text-3xl font-bold mb-4">R$ 20,00</p>
+            <p className="text-sm">Chave Pix: <span className="font-bold">{PIX}</span></p>
+          </div>
+
+          {/* Botões */}
+          <div className="space-y-3">
+            <button
+              onClick={() => setView('numeros')}
+              className="w-full bg-pink-600 text-white font-bold py-4 rounded-xl shadow-md hover:bg-pink-700 transition-all"
+            >
+              🎯 Escolher Números
+            </button>
             
-            if (state.carrinho.includes(numero)) {
-                state.carrinho = state.carrinho.filter(n => n !== numero);
-            } else {
-                state.carrinho.push(numero);
-            }
-            render();
-        }
-
-        function removerDoCarrinho(numero) {
-            state.carrinho = state.carrinho.filter(n => n !== numero);
-            render();
-        }
-
-        function copiarPix() {
-            navigator.clipboard.writeText(PIX).then(() => {
-                const feedback = document.getElementById('pix-copiado');
-                if (feedback) {
-                    feedback.style.opacity = '1';
-                    setTimeout(() => {
-                        feedback.style.opacity = '0';
-                    }, 2000);
-                }
-            });
-        }
-
-        function finalizarCompra() {
-            if (state.carrinho.length === 0) {
-                alert('Adicione pelo menos um número ao carrinho!');
-                return;
-            }
-            
-            const numerosOrdenados = [...state.carrinho].sort((a, b) => a - b);
-            const total = state.carrinho.length * 20;
-            const mensagem = `Oi! Quero participar da Rifa Solidária da Violeta 💜💜\n\nEscolhi ${state.carrinho.length} número(s): ${numerosOrdenados.join(', ')}\n\nTotal: R$ ${total.toLocaleString('pt-BR')}\n\nEu já mando o pagamento!\n\n------------------------\n\nChave Pix: 1499743-2961`;
-            window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensagem)}`, '_blank');
-            state.carrinho = [];
-            state.mostrarCarrinho = false;
-            render();
-        }
-
-        function renderHome() {
-            const progressoPercent = Math.min((state.stats.pagos * 20 / META) * 100, 100);
-            
-            return `
-                <div class="min-h-screen bg-purple-50">
-                    <div class="bg-white shadow-md">
-                        <div class="container mx-auto px-4 py-6">
-                            <h1 class="text-4xl font-bold text-center text-gray-800" style="font-family: cursive">
-                                Rifa Solidária
-                            </h1>
-                            <div class="w-32 mx-auto border-t-2 border-gray-800 mt-2"></div>
-                        </div>
-                    </div>
-
-                    <div class="container mx-auto px-4 py-8 max-w-4xl">
-                        <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
-                            <div class="flex flex-col md:flex-row gap-6 items-center">
-                                <div class="w-32 h-32 rounded-full flex-shrink-0 overflow-hidden border-4 border-purple-300 shadow-lg">
-                                    <img 
-                                        src="https://raw.githubusercontent.com/dummcocontas-cmd/meusite/refs/heads/main/assets/ll.jpeg" 
-                                        alt="Foto da Violeta"
-                                        class="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <div class="flex-1 text-center md:text-left">
-                                    <h2 class="text-2xl font-bold text-gray-800 mb-3">Ajude a Violeta</h2>
-                                    <p class="text-gray-700 leading-relaxed">
-                                        A Violeta é uma cachorrinha SRD, que após sofrer um ato de crueldade (ser atropelada e abandonada)
-                                        Teve uma fratura grave na coluna e foi diagnosticada também com doença do carrapato 💔<br>
-
-                                        Para que ela possa se recuperar e voltar a andar, teve que fazer uma cirurgia delicada, está fazendo um tratamento, e está tomando alguns remédios, e tudo terá um custo de aproximadamente <strong style="color: #6b227d">R$ 6.180,00</strong>.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 mb-6">
-                            <div class="bg-white rounded-xl shadow-md p-4 text-center">
-                                <div class="text-2xl font-bold text-green-600">${state.stats.disponiveis}</div>
-                                <div class="text-xs text-gray-600">Disponíveis</div>
-                            </div>
-                            <div class="bg-white rounded-xl shadow-md p-4 text-center">
-                                <div class="text-2xl font-bold text-yellow-600">${state.stats.reservados}</div>
-                                <div class="text-xs text-gray-600">Reservados</div>
-                            </div>
-                            <div class="bg-white rounded-xl shadow-md p-4 text-center">
-                                <div class="text-2xl font-bold text-red-600">${state.stats.pagos}</div>
-                                <div class="text-xs text-gray-600">Pagos</div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-                            <div class="flex justify-between text-sm text-gray-600 mb-2">
-                                <span class="font-bold" style="color: #6b227d">R$ ${(state.stats.pagos * 20).toLocaleString('pt-BR')}</span>
-                                <span>Meta: R$ ${META.toLocaleString('pt-BR')}</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-4">
-                                <div class="h-4 rounded-full transition-all" style="background-color: #6b227d; width: ${progressoPercent}%"></div>
-                            </div>
-                        </div>
-
-                        <div class="text-white rounded-xl shadow-md p-6 mb-6 text-center" style="background-color: #6b227d">
-                            <p class="text-sm mb-2">Valor por número</p>
-                            <p class="text-3xl font-bold mb-4">R$ 20,00</p>
-                            <p class="text-sm mb-3">Chave Pix:</p>
-                            <button 
-                                onclick="copiarPix()"
-                                class="font-bold px-6 py-3 rounded-lg transition-all flex items-center gap-2 mx-auto"
-                                style="background-color: white; color: #6b227d"
-                                onmouseover="this.style.backgroundColor='#f3e8ff'"
-                                onmouseout="this.style.backgroundColor='white'"
-                            >
-                                <span>📋</span>
-                                <span id="pix-texto">${PIX}</span>
-                            </button>
-                            <p id="pix-copiado" class="text-xs mt-2 opacity-0 transition-opacity">✓ Copiado!</p>
-                        </div>
-
-                        <button onclick="state.view = 'numeros'; render()" class="w-full text-white font-bold py-4 rounded-xl shadow-md transition-all" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
-                            🎯 Escolher Números
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderNumeros() {
-            let numerosHTML = '';
-            for (let i = 1; i <= 300; i++) {
-                const numero = state.numeros[i];
-                const disponivel = numero?.status === 'disponivel';
-                const noCarrinho = state.carrinho.includes(i);
-                const corClass = noCarrinho ? 'ring-2' : getCorStatus(numero?.status || 'disponivel');
-                const corStyle = noCarrinho ? 'background-color: #6b227d; border: 2px solid #4a1858' : '';
-                
-                numerosHTML += `
-                    <button 
-                        onclick="handleNumeroClick(${i})"
-                        ${!disponivel ? 'disabled' : ''}
-                        class="${corClass} text-white font-bold py-2 text-sm transition-all transform ${disponivel ? 'hover:scale-110' : 'opacity-60'}"
-                        style="${corStyle}"
-                    >
-                        ${i}
-                    </button>
-                `;
-            }
-
-            let carrinhoModal = '';
-            if (state.mostrarCarrinho) {
-                carrinhoModal = `
-                    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50">
-                        <div class="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[80vh] overflow-hidden">
-                            <div class="p-6 border-b flex items-center justify-between">
-                                <h2 class="text-xl font-bold text-gray-800">Meu Carrinho</h2>
-                                <button onclick="state.mostrarCarrinho = false; render()" class="text-gray-600 hover:text-gray-800 text-2xl">✕</button>
-                            </div>
-                            
-                            <div class="p-6 overflow-y-auto max-h-[50vh]">
-                                ${state.carrinho.length === 0 ? 
-                                    '<p class="text-center text-gray-500 py-8">Nenhum número selecionado</p>' :
-                                    state.carrinho.sort((a, b) => a - b).map(num => `
-                                        <div class="flex items-center justify-between p-3 rounded-lg mb-2" style="background-color: #f3e8ff">
-                                            <span class="font-bold text-gray-800">Número ${num}</span>
-                                            <div class="flex items-center gap-3">
-                                                <span class="font-bold" style="color: #6b227d">R$ 20,00</span>
-                                                <button onclick="removerDoCarrinho(${num})" class="text-red-500 hover:text-red-700 text-xl">🗑️</button>
-                                            </div>
-                                        </div>
-                                    `).join('')
-                                }
-                            </div>
-
-                            ${state.carrinho.length > 0 ? `
-                                <div class="p-6 border-t">
-                                    <div class="flex justify-between mb-4 text-lg font-bold">
-                                        <span>Total:</span>
-                                        <span style="color: #6b227d">R$ ${(state.carrinho.length * 20).toLocaleString('pt-BR')}</span>
-                                    </div>
-                                    <button onclick="finalizarCompra()" class="w-full text-white font-bold py-4 rounded-xl transition-all" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
-                                        Enviar para WhatsApp
-                                    </button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-
-            return `
-                <div class="min-h-screen bg-purple-50">
-                    <div class="bg-white shadow-md sticky top-0 z-10">
-                        <div class="container mx-auto px-4 py-4">
-                            <div class="flex items-center justify-between">
-                                <button onclick="state.view = 'home'; render()" class="font-semibold" style="color: #6b227d" onmouseover="this.style.color='#4a1858'" onmouseout="this.style.color='#6b227d'">
-                                    ← Voltar
-                                </button>
-                                <h1 class="text-2xl font-bold text-gray-800">Escolha seus números</h1>
-                                <button onclick="state.mostrarCarrinho = true; render()" class="relative text-white px-4 py-2 rounded-lg" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
-                                    🛒
-                                    ${state.carrinho.length > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">${state.carrinho.length}</span>` : ''
-
-                                        <a
+            <a
               href="https://www.facebook.com/ajudeavioleta/"
               target="_blank"
               rel="noopener noreferrer"
@@ -295,54 +270,247 @@
               </svg>
               Siga nossa página no Facebook
             </a>
-                                    
-                                </button>
-                              
-                            </div>
-                        </div>
-                    </div>
+            
+            <button
+              onClick={() => setView('admin')}
+              className="w-full bg-gray-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-gray-700 transition-all flex items-center justify-center gap-2"
+            >
+              <Shield className="w-5 h-5" />
+              Admin
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-                    <div class="container mx-auto px-4 py-6">
-                        <div class="bg-white rounded-lg shadow-md p-3 mb-4 flex gap-4 justify-center text-sm">
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 bg-green-500 rounded"></div>
-                                <span>Disponível</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 bg-yellow-500 rounded"></div>
-                                <span>Reservado</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 bg-red-500 rounded"></div>
-                                <span>Pago</span>
-                            </div>
-                        </div>
+  // NÚMEROS VIEW
+  if (view === 'numeros') {
+    return (
+      <div className="min-h-screen bg-pink-50">
+        <div className="bg-white shadow-md sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setView('home')}
+                className="text-pink-600 hover:text-pink-800 font-semibold"
+              >
+                ← Voltar
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800">Escolha seus números</h1>
+              <button
+                onClick={() => setMostrarCarrinho(true)}
+                className="relative bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {carrinho.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">
+                    {carrinho.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
 
-                        <div class="bg-white rounded-xl shadow-md p-4">
-                            <div class="grid grid-cols-10 gap-1">
-                                ${numerosHTML}
-                            </div>
-                        </div>
-                    </div>
+        <div className="container mx-auto px-4 py-6">
+          {/* Legenda */}
+          <div className="bg-white rounded-lg shadow-md p-3 mb-4 flex gap-4 justify-center text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded"></div>
+              <span>Disponível</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+              <span>Reservado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded"></div>
+              <span>Pago</span>
+            </div>
+          </div>
 
-                    ${carrinhoModal}
+          {/* Grade de Números */}
+          <div className="bg-white rounded-xl shadow-md p-4">
+            <div className="grid grid-cols-10 gap-1">
+              {Array.from({ length: 300 }, (_, i) => i + 1).map((num) => {
+                const numero = numeros[num];
+                const disponivel = numero?.status === 'disponivel';
+                const noCarrinho = carrinho.includes(num);
+                
+                return (
+                  <button
+                    key={num}
+                    onClick={() => {
+                      if (disponivel) {
+                        if (noCarrinho) {
+                          removerDoCarrinho(num);
+                        } else {
+                          adicionarAoCarrinho(num);
+                        }
+                      }
+                    }}
+                    disabled={!disponivel}
+                    className={`
+                      ${noCarrinho ? 'bg-pink-600 ring-2 ring-pink-800' : getCorStatus(numero?.status || 'disponivel')}
+                      text-white font-bold py-2 text-sm
+                      transition-all transform
+                      ${disponivel ? 'hover:scale-110' : 'opacity-60'}
+                    `}
+                  >
+                    {num}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal do Carrinho */}
+        {mostrarCarrinho && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50">
+            <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[80vh] overflow-hidden">
+              <div className="p-6 border-b flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-800">Meu Carrinho</h2>
+                <button
+                  onClick={() => setMostrarCarrinho(false)}
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[50vh]">
+                {carrinho.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">Nenhum número selecionado</p>
+                ) : (
+                  <div className="space-y-2">
+                    {carrinho.sort((a, b) => a - b).map((num) => (
+                      <div key={num} className="flex items-center justify-between bg-pink-50 p-3 rounded-lg">
+                        <span className="font-bold text-gray-800">Número {num}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-pink-600 font-bold">R$ 20,00</span>
+                          <button
+                            onClick={() => removerDoCarrinho(num)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {carrinho.length > 0 && (
+                <div className="p-6 border-t">
+                  <div className="flex justify-between mb-4 text-lg font-bold">
+                    <span>Total:</span>
+                    <span className="text-pink-600">R$ {(carrinho.length * 20).toLocaleString('pt-BR')}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      finalizarCompra();
+                      setMostrarCarrinho(false);
+                    }}
+                    className="w-full bg-pink-600 text-white font-bold py-4 rounded-xl hover:bg-pink-700 transition-all"
+                  >
+                    Enviar para WhatsApp
+                  </button>
                 </div>
-            `;
-        }
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
-        function render() {
-            const app = document.getElementById('app');
-            app.innerHTML = state.view === 'home' ? renderHome() : renderNumeros();
-        }
+  // ADMIN VIEW
+  if (view === 'admin') {
+    if (!isAdmin) {
+      return (
+        <div className="min-h-screen bg-pink-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full mx-4">
+            <button
+              onClick={() => setView('home')}
+              className="text-pink-600 hover:text-pink-800 font-semibold mb-4"
+            >
+              ← Voltar
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Área Administrativa</h2>
+            <input
+              type="password"
+              placeholder="Senha"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 focus:border-pink-600 outline-none"
+              onKeyPress={(e) => e.key === 'Enter' && adminPassword === 'violeta2024' && setIsAdmin(true)}
+            />
+            <button
+              onClick={() => {
+                if (adminPassword === 'violeta2024') {
+                  setIsAdmin(true);
+                } else {
+                  alert('Senha incorreta!');
+                }
+              }}
+              className="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700"
+            >
+              Entrar
+            </button>
+            <p className="text-xs text-gray-500 mt-4 text-center">Senha padrão: violeta2024</p>
+          </div>
+        </div>
+      );
+    }
 
-        window.handleNumeroClick = handleNumeroClick;
-        window.removerDoCarrinho = removerDoCarrinho;
-        window.finalizarCompra = finalizarCompra;
-        window.copiarPix = copiarPix;
-        window.state = state;
-        window.render = render;
+    return (
+      <div className="min-h-screen bg-pink-50">
+        <div className="bg-white shadow-md">
+          <div className="container mx-auto px-4 py-4">
+            <button
+              onClick={() => { setView('home'); setIsAdmin(false); }}
+              className="text-pink-600 hover:text-pink-800 font-semibold mb-2"
+            >
+              ← Sair
+            </button>
+            <h1 className="text-2xl font-bold text-center text-gray-800">Painel Admin</h1>
+          </div>
+        </div>
 
-        window.onload = () => initFirebase();
-    </script>
-</body>
-</html>
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-white rounded-xl shadow-md p-4 mb-4">
+            <p className="text-sm text-gray-600 mb-4">Clique para mudar status: Verde → Amarelo → Azul</p>
+            <div className="grid grid-cols-10 gap-1">
+              {Array.from({ length: 300 }, (_, i) => i + 1).map((num) => {
+                const numero = numeros[num];
+                
+                return (
+                  <button
+                    key={num}
+                    onClick={() => {
+                      const novoStatus = 
+                        numero?.status === 'disponivel' ? 'reservado' :
+                        numero?.status === 'reservado' ? 'pago' :
+                        'disponivel';
+                      atualizarNumero(num, novoStatus);
+                    }}
+                    className={`
+                      ${getCorStatus(numero?.status || 'disponivel')}
+                      text-white font-bold py-2 text-sm
+                      hover:scale-110 transition-all transform
+                    `}
+                  >
+                    {num}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
