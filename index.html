@@ -21,7 +21,6 @@
             messagingSenderId: "791676617355",
             appId: "1:791676617355:web:8beeb1f41d6b71e08bca8e"
         };
-
         const WHATSAPP = '5514997432961';
         const PIX = '14 99743-2961';
         const META = 6000;
@@ -204,6 +203,32 @@
                         <button onclick="state.view = 'numeros'; render()" class="w-full text-white font-bold py-4 rounded-xl shadow-md transition-all" style="background-color: #6b227d" onmouseover="this.style.backgroundColor='#5a1d69'" onmouseout="this.style.backgroundColor='#6b227d'">
                             🎯 Escolher Números
                         </button>
+
+
+<a 
+    href="https://www.facebook.com/ajudeavioleta/" 
+    target="_blank"
+    class="w-full block text-center font-bold py-4 rounded-xl shadow-md mt-4 flex items-center justify-center gap-3 transition-all"
+    style="background-color: #1877f2; color: white"
+    onmouseover="this.style.backgroundColor='#125dc2'"
+    onmouseout="this.style.backgroundColor='#1877f2'"
+>
+    <!-- Ícone oficial do Facebook -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="white" viewBox="0 0 24 24">
+        <path d="M22.675 0H1.325C.593 0 0 .593 0 1.325v21.351C0 23.406.593 24 1.325 24H12.82v-9.294H9.692V11.01h3.128V8.309c0-3.1 1.893-4.788 4.658-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.716-1.795 1.764v2.317h3.587l-.467 3.696h-3.12V24h6.116C23.406 24 24 23.406 24 22.676V1.325C24 .593 23.406 0 22.675 0z"/>
+    </svg>
+
+    Acompanhe a Violeta no Facebook
+</a>
+
+
+
+
+
+
+
+
+
                     </div>
                 </div>
             `;
@@ -251,6 +276,10 @@
                                                 <button onclick="removerDoCarrinho(${num})" class="text-red-500 hover:text-red-700 text-xl">🗑️</button>
                                             </div>
                                         </div>
+
+
+
+                                        
                                     `).join('')
                                 }
                             </div>
@@ -284,20 +313,6 @@
                                     🛒
                                     ${state.carrinho.length > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">${state.carrinho.length}</span>` : ''}
                                 </button>
-
-
-<a 
-    href="https://www.facebook.com/ajudeavioleta/" 
-    target="_blank"
-    class="w-full block text-center font-bold py-4 rounded-xl shadow-md mt-4 transition-all"
-    style="background-color: #1877f2; color: white"
-    onmouseover="this.style.backgroundColor='#125dc2'"
-    onmouseout="this.style.backgroundColor='#1877f2'"
->
-    💜 Acompanhar a Violeta no Facebook
-</a>
-
-
 
                                 
                             </div>
